@@ -1,0 +1,308 @@
+---
+title: "Statistical Sampling- Unit 1 - NAEP statistics"
+author: "Alex Deshowitz"
+date: "April 30, 2017"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The dataframe used in this quick analysis was pulled from the NAEP nation's report card reports.  The data was pulled at the state level for 2009 - 2015.  The scores included are Math scores only.
+
+More information regarding the data source can be found here : https://nces.ed.gov/nationsreportcard/
+
+This very high level analysis covers the state of Texas and the changes in the scores for the state over the past 7 years.
+
+
+```{r}
+
+
+packages <- c('plyr', 'sqldf', 'reshape','ggplot2')
+
+sapply(packages, library, character.only = TRUE)
+
+```
+
+```{r}
+
+
+overall_df <- read.csv('Analysis/Data/Math_educ_overall_v01.csv', header = TRUE, skip = 9, nrows = 208)
+
+```
+
+```{r}
+
+head(overall_df)
+
+ncol(overall_df)
+
+str(overall_df)
+
+summary(overall_df)
+
+
+```
+
+
+
+The first thing we need to do is create a better year column
+```{r}
+
+years <- unique(overall_df$Year[!is.na(overall_df$Year)])
+
+y <- rep(years, each = 52)
+
+overall_df['new_year'] <- y
+
+# drop the old column
+
+overall_df$Year <- NULL
+
+```
+
+
+Let's reorder the dataframe now
+
+```{r}
+
+overall_df<- overall_df[,c("new_year","Jurisdiction","Average.scale.score","Standard.Error")]
+
+# rename
+
+overall_df <- rename (overall_df, c('new_year' = 'year','Jurisdiction' = 'jurisdiction', 'Average.scale.score' = 'avg_scale_score', 'Standard.Error' = 'std_error'))
+
+```
+
+It looks like the standard error column is still funky; let's take a look at it
+
+```{r}
+
+str(overall_df)
+
+
+```
+
+It looks like our data is now good to go
+
+
+How does Texas rank compared to other states in the country
+
+
+```{r}
+
+# order the data by score
+
+analysis_df <- overall_df[order(overall_df$year, overall_df$avg_scale_score, decreasing =TRUE), ]
+
+
+# let'st just look at the 2015 values first:
+
+analysis_df <- subset(analysis_df, year == 2015)
+
+# rank
+
+analysis_df$rank<- NA
+
+analysis_df$rank <- 1:nrow(analysis_df)
+
+head(analysis_df, 53)
+
+
+
+```
+
+
+```{r}
+
+# let's look at the ranks of the math scores
+
+barplot(analysis_df$avg_scale_score, names.arg = analysis_df$jurisdiction, cex.names = 0.7, las = 2, ylim = c(250,300), xpd = FALSE, main = "2015 United States NAEP Math Scores")
+
+```
+
+It looks like Texas is ranked 25 in 2015.  I wonder if that has changed over the past several years?
+
+```{r}
+# need to rank and pull the data together for the previous years:
+
+# create subdfs (not the most efficient, but will be easy to rank)
+
+analysis_df_2014 <- subset(overall_df, year == 2014)
+analysis_df_2013 <- subset(overall_df, year == 2013)
+analysis_df_2012 <- subset(overall_df, year == 2012)
+analysis_df_2011 <- subset(overall_df, year == 2011)
+analysis_df_2010 <- subset(overall_df, year == 2010)
+analysis_df_2009 <- subset(overall_df, year == 2009)
+
+rm(analysis_df_2010, analysis_df_2012, analysis_df_2014)
+
+# now, we need to make sure that the ordering was maintainted
+
+head(analysis_df_2013)
+
+# looks like it wasn't...let's resort all DFs
+
+analysis_df_2013 <- analysis_df_2013[order(analysis_df_2013$year, analysis_df_2013$avg_scale_score, decreasing =TRUE), ]
+
+analysis_df_2011 <- analysis_df_2011[order(analysis_df_2011$year, analysis_df_2011$avg_scale_score, decreasing =TRUE), ]
+
+analysis_df_2009 <- analysis_df_2009[order(analysis_df_2009$year, analysis_df_2009$avg_scale_score, decreasing =TRUE), ]
+
+# looks like reordering worked well.  Now, let's add in the rank column:
+
+analysis_df_2013$rank<- NA
+analysis_df_2013$rank <- 1:nrow(analysis_df_2013)
+
+
+analysis_df_2011$rank<- NA
+analysis_df_2011$rank <- 1:nrow(analysis_df_2011)
+
+analysis_df_2009$rank<- NA
+analysis_df_2009$rank <- 1:nrow(analysis_df_2009)
+
+```
+
+Now, we should be good to go for a little more analysis.  We may want to consolidate all of this information into one dataframe just to be "tidy"
+
+
+```{r}
+
+# a very untidy approach, but works...Should really use the merge functionality in the Tidyverse
+
+tidy_df <- sqldf('Select T1.jurisdiction As jurisdiction, 
+T1.rank As "2015_rank", 
+T1.avg_scale_score As "2015_avg_score",
+T1.std_error As "2015_std_error",
+
+T4.rank As "2013_rank", 
+T4.avg_scale_score As "2013_avg_score",
+T4.std_error As "2013_std_error",
+
+T3.rank As "2011_rank", 
+T3.avg_scale_score As "2011_avg_score",
+T3.std_error As "2011_std_error",
+
+T2.rank As "2009_rank",
+T2.avg_scale_score As "2009_avg_score",
+T2.std_error As "2009_std_error"
+
+
+From analysis_df T1
+
+Left Outer Join analysis_df_2009 T2 
+On T1.jurisdiction = T2.jurisdiction
+
+Left Outer Join analysis_df_2011 T3
+On T1.jurisdiction = T3.jurisdiction
+
+Left Outer Join analysis_df_2013 T4
+On T1.jurisdiction = T4.jurisdiction')
+
+```
+
+
+```{r}
+
+# remove the unused dfs from the environment
+
+rm(analysis_df_2009, analysis_df_2011, analysis_df_2013)
+
+```
+
+
+
+Let's look at the scores for Texas over the past few years
+
+```{r}
+
+par(mfrow = c(1,2))
+
+texas_df <- subset(tidy_df, tidy_df$jurisdiction == "Texas")
+
+# proly want to melt it 
+
+
+texas_df <- melt(texas_df)
+
+texas_df <- sqldf('Select * From texas_df Where variable Like ("%rank%")')
+
+texas_df$year <- c(2015, 2013, 2011, 2009)
+
+ggplot(data = texas_df, aes(x = year, y = value)) + geom_line(color = 'dark blue', size = 2) + ggtitle('Texas Math Score Rank 2009-2015') + theme(plot.title = element_text(lineheight = 0.8, face = 'bold'))
+
+# do the same for score
+
+texas_df <- subset(tidy_df, tidy_df$jurisdiction == "Texas")
+
+texas_df <- melt(texas_df)
+
+texas_df <- sqldf('Select * From texas_df Where variable Like ("%score%")')
+
+texas_df$year <- c(2015, 2013, 2011, 2009)
+
+ggplot(data = texas_df, aes(x = year, y = value)) + geom_line(color = 'dark blue', size = 2) + ggtitle('Texas Math Score 2009-2015') + theme(plot.title = element_text(lineheight = 0.8, face = 'bold'))
+
+```
+
+Maybe this is a little misleading, but what it shows is that the math score rankings for Texas have dropped over the past 7 years.  So, it looks like the real issue is that the Texas Math score has dropped over the past few years.  WE would need to look at some additional information to figure out why this is the case.  I wonder if the new score is statistically significantly different from 2009 levels though.  Remember that ggplot has automatically truncated the axis
+
+```{r}
+
+# change since 2009
+
+(subset(tidy_df, tidy_df$jurisdiction == "Texas"))$'2015_avg_score' 
+(subset(tidy_df, tidy_df$jurisdiction == "Texas"))$'2009_avg_score' 
+
+
+(subset(tidy_df, tidy_df$jurisdiction == "Texas"))$'2015_avg_score' /
+(subset(tidy_df, tidy_df$jurisdiction == "Texas"))$'2009_avg_score' -1
+
+# peak score
+
+(subset(tidy_df, tidy_df$jurisdiction == "Texas"))$'2011_avg_score'
+
+# difference from peak
+
+(subset(tidy_df, tidy_df$jurisdiction == "Texas"))$'2015_avg_score' /
+(subset(tidy_df, tidy_df$jurisdiction == "Texas"))$'2011_avg_score' -1
+
+
+```
+
+The score has only dropped 1% since 2009.  Granted, the peak score of 290 has seen a 2% decline.  I wonder if the testing procedures changed or something?
+
+Let's see if the difference between the years has a statistically significant difference.
+
+```{r}
+
+# let's look at error bars for the overlap possibilities usng the overall cleaned frame:
+
+texas_df = subset(overall_df, overall_df$jurisdiction == 'Texas')
+
+# reorder
+
+texas_df = sqldf('Select * From texas_df Order By year')
+
+# now plot the 95% confidence intervals: note that the std. error has already been calculated for us:
+
+
+ggplot(texas_df, aes(x = year, color = year))+  geom_errorbar(aes(ymax = texas_df$avg_scale_score + 1.96*texas_df$std_error), ymin = texas_df$avg_scale_score - 1.96*texas_df$std_error, position = 'dodge', lwd = 1.5) + coord_flip(ylim = c(295, 275)) + ggtitle('Texas Math Score Confidence Intervals 2009-2015') 
+
+
+
+```
+
+
+It looks like the 2011 score is statistically significantly different from the 2015 score.  Of course, we are not making any adjustments such as bonferroni for multiple comparisons.  It does appear however, that 2015 does show some signs of being significatnly worse for Texas than the other years.  
+
+
+
+
+
+
+
+
+
+

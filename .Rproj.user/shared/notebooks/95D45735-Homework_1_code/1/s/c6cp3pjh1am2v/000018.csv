@@ -1,0 +1,9 @@
+"0","par(mfrow = c(1,2))"
+"0","texas_df <- subset(tidy_df, tidy_df$jurisdiction == ""Texas"")"
+"0","# proly want to melt it "
+"0","texas_df <- melt(texas_df)"
+"2","Using jurisdiction as id variables
+"
+"0","texas_df <- sqldf('Select * From texas_df Where variable Like (""%rank%"")')"
+"0","texas_df$year <- c(2015, 2013, 2011, 2009)"
+"0","ggplot(data = texas_df, aes(x = year, y = value)) + geom_line(color = 'dark blue', size = 2) + ggtitle('Texas Math Score Rank 2009-2015') + theme(plot.title = element_text(lineheight = 0.8, face = 'bold'))"

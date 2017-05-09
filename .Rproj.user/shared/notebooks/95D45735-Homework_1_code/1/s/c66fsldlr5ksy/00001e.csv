@@ -1,0 +1,8 @@
+"0","# order the data by score"
+"0","analysis_df <- overall_df[order(overall_df$year, overall_df$avg_scale_score, decreasing =TRUE), ]"
+"0","# let'st just look at the 2015 values first:"
+"0","analysis_df <- subset(analysis_df, year == 2015)"
+"0","# rank"
+"0","analysis_df$rank<- NA"
+"0","analysis_df$rank <- 1:nrow(analysis_df)"
+"0","head(analysis_df, 53)"

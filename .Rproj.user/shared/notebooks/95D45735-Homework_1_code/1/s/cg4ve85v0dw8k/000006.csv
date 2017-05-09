@@ -1,0 +1,3 @@
+"0","overall_df<- overall_df[,c(""new_year"",""Jurisdiction"",""Average.scale.score"",""Standard.Error"")]"
+"0","# rename"
+"0","overall_df <- rename (overall_df, c('new_year' = 'year','Jurisdiction' = 'jurisdiction', 'Average.scale.score' = 'avg_scale_score', 'Standard.Error' = 'std_error'))"

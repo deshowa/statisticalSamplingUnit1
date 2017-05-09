@@ -1,0 +1,5 @@
+"0","years <- unique(overall_df$Year[!is.na(overall_df$Year)])"
+"0","y <- rep(years, each = 52)"
+"0","overall_df['new_year'] <- y"
+"0","# drop the old column"
+"0","overall_df$Year <- NULL"
